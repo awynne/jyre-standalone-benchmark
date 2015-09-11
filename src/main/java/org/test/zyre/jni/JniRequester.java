@@ -1,20 +1,20 @@
-package org.test;
+package org.test.zyre.jni;
 
+import java.util.HashMap;
 import java.util.Timer;
 import java.util.TimerTask;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.zeromq.ZMsg;
-import org.zyre.ZreInterface;
+import org.zyre.Zyre;
 
-public class ZyreRequester {
+public class JniRequester {
 	
-	private static final Logger log = LoggerFactory.getLogger(ZyreRequester.class);
+	private static final Logger log = LoggerFactory.getLogger(JniRequester.class);
 	
 	private String group = "local";
 	
-	private ZreInterface zre = null;
+	private Zyre zyre = null;
 	
 	private long sent = 0;
 	private long received = 0;
@@ -26,19 +26,22 @@ public class ZyreRequester {
 	private Timer timer = new Timer();
 	
 	private int numPeers = 0;
+	
+	private Thread listenerThread;
 
-	public ZyreRequester(int interval, int numMsgs, int numResponders) {
+	public JniRequester(int interval, int numMsgs, int numResponders) {
 		this.interval = interval;
 		this.numMsgs  = numMsgs;
 		this.numResponders = numResponders;
 	}
 
 	public void start() {
-		zre = new ZreInterface();
-		zre.join(group);		
+		zyre = new Zyre();
+		zyre.create();
+		zyre.join(group);		
 
 		// thread for requester to receive responses 
-		Thread listenerThread = new Thread(new Listener());
+		listenerThread = new Thread(new Listener());
 		listenerThread.start();
 		
 		// Wait for all expected peers to join before sending
@@ -60,6 +63,14 @@ public class ZyreRequester {
 		send();
 	}
 	
+	public void join() {
+		try {
+			listenerThread.join();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+	}
+	
 	/**
 	 * Send numMsgs shouts
 	 */
@@ -68,10 +79,8 @@ public class ZyreRequester {
 		
 		for (sent=0; sent < numMsgs; sent++) {
 			String text = "request-payload-" + sent;
-			ZMsg outgoing = new ZMsg();
-			outgoing.add(group);
-			outgoing.add(text);
-			zre.shout(outgoing);
+
+			zyre.shout(group, text);
 			
 			if (interval > 0) {
 				try { Thread.sleep(interval); } 
@@ -90,7 +99,7 @@ public class ZyreRequester {
 			try { Thread.sleep(2000); } 
 			catch (InterruptedException e) { e.printStackTrace();}
 
-			if (++waited >= 3) { 
+			if (++waited >= 10) { 
 				log.info("timed out waiting for responses");
 				break; 
 			}
@@ -106,14 +115,15 @@ public class ZyreRequester {
 		@Override
 		public void run() {
 			while(true) {
-				ZMsg incoming = zre.recv();
+				String data = zyre.recv();
 			
-				if (incoming == null) {// Interrupted
+				if (data == null) {// Interrupted
 					log.error("Interrupted during recv()");
 					break;
 				}
 							
-				String eventType = incoming.popString();			
+				HashMap<String,String> map = Utils.jsonZmsgToMap(data);
+				String eventType = map.get("event");
 				
 				// responder messages are received here
 				if (eventType.equals("WHISPER")) {

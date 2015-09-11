@@ -1,5 +1,5 @@
-import org.test.ZyreRequester;
-import org.test.ZyreResponder;
+import org.test.zyre.jeromq.ZyreRequester;
+import org.test.zyre.jeromq.ZyreResponder;
 
 public class ManualTest {
 	private static int numResponders = 10;

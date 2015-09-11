@@ -1,7 +1,20 @@
 # jyre-standalone-benchmark
 
-This project comprises a benchmark test for jyre. *Currently, it appears
-that messages are being lost when they are sent at high volumes.*
+This project comprises a benchmark test for jyre. It 
+demonstrates the following:
+
+* The pure java version of jyre experiences message loss at 
+higher volumes
+* An initial version of a JNI wrapper for libzyre does not
+have the same message loss
+
+The JNI wrapper works but could use some improvement.  It is currently
+checked into the zyre project 
+[bindings directory](https://github.com/zeromq/zyre/tree/master/bindings/java/zyre-jni).
+If you are running on linux, you can probably use the already compiled
+so which is stored in 
+
+    native/linux/libzrejni.so
 
 This test runs in a single process and does the following:
 
@@ -9,12 +22,6 @@ This test runs in a single process and does the following:
 * each responder sends a unicast "whisper" response back to the responder
 * the responder counts up the received messages and reports on the percentage
   received (out of the total expected)
-
-This test can be run from the IDE or from the command line
-
-## Running from the IDE
-
-Run the java class: src/test/java/ManualTest.java
 
 ## Running from the command line
 
@@ -38,30 +45,19 @@ the following command to learn the command line args:
 
     > bin/jyre-standalone-benchmark --help
     usage: jyre-standalone-benchmark
-     -i,--interval <arg>        ms to wait between sends
-     -m,--numMsgs <arg>         number of messages to send
-     -r,--numResponders <arg>   number of responder threads to start
+    ...
 
-## A command that succeeds
+## Example command
 
-On my linux machine, the following succeeds:
+This was tested on a linux VM:
 
-    > bin/jyre-standalone-benchmark --numResponders 10 --numMsgs 10 --interval 100
+    > bin/jyre-standalone-benchmark --zyreImpl jni --numResponders 10 --numMsgs 10000 --interval 0
     
 You can tell it succeeds because the console output reports that it received 
 100% of expected messages:
     
-    INFO  org.test.ZyreRequester - sent: 10 expected: 100 received: 100 (100%)
+    INFO  org.test.zyre.jni.JniRequester - sent: 10000 expected: 100000 received: 100000 (100%)
     
-## A command that fails
-
-When the interval between messages decreases, messages appear to get lost.
-On my linux machine, the following benchmark fails to deliver all messages:
-
-    > bin/jyre-standalone-benchmark --numResponders 10 --numMsgs 100 --interval 5
-    
-The output of this command usually says something like:
-
-    INFO  org.test.ZyreRequester - sent: 1000 expected: 10000 received: 292 (3%)
-
+The above command works when the jni implementation is used, but 
+not when the java implementation is used.
 

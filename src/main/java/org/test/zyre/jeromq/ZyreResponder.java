@@ -1,4 +1,4 @@
-package org.test;
+package org.test.zyre.jeromq;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
